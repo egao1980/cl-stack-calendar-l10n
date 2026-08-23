@@ -1,0 +1,137 @@
+name: Binaries
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: cl-stack-calendar-l10n-binaries-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SBCL_VERSION: 2.6.7
+  ROSWELL_VERSION: "26.02.116"
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            triple: linux-amd64
+          - os: macos-latest
+            triple: darwin-arm64
+          - os: windows-latest
+            triple: windows-amd64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: egao1980/cl-repository/.github/actions/setup-client@main
+
+      - uses: egao1980/cl-repository/.github/actions/setup-roswell@main
+        with:
+          sbcl-version: ${{ env.SBCL_VERSION }}
+          roswell-version: ${{ env.ROSWELL_VERSION }}
+
+      - name: cl-repo install deps
+        shell: bash
+        run: ros -l scripts/ci-install.lisp -q
+
+      - name: Dump SBCL executable
+        shell: bash
+        env:
+          DUMP_DIR: dist/calendar-l10n-${{ matrix.triple }}
+        run: ros -l scripts/dump-image.lisp -q
+
+      - name: Smoke binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="dist/calendar-l10n-${{ matrix.triple }}"
+          tmp="${RUNNER_TEMP:-/tmp}"
+          out="$tmp/cal-l10n-smoke.txt"
+          err="$tmp/cal-l10n-smoke.err"
+          if [[ "${{ matrix.os }}" == windows-latest ]]; then
+            bin="$root/calendar-l10n.exe"
+          else
+            bin="$root/calendar-l10n"
+            chmod +x "$bin"
+          fi
+          "$bin" --datetime 2024-07-04 --timezone UTC --locales en \
+            --calendars gregorian --countries US --no-english \
+            >"$out" 2>"$err"
+          cat "$out"
+          if grep -E -i 'compiling file|COMPILE-FILE' "$err"; then
+            echo "binary recompiled Lisp sources — dump isolation failed" >&2
+            cat "$err" >&2
+            exit 1
+          fi
+          grep -q "Independence" "$out"
+
+      - name: Pack
+        shell: bash
+        run: |
+          triple="${{ matrix.triple }}"
+          mkdir -p dist
+          if [[ "${{ matrix.os }}" == windows-latest ]]; then
+            (cd dist && 7z a -tzip "calendar-l10n-${triple}.zip" "calendar-l10n-${triple}")
+          else
+            tar -C dist -czf "dist/calendar-l10n-${triple}.tar.gz" "calendar-l10n-${triple}"
+          fi
+          ls -lh dist/calendar-l10n-${triple}.*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calendar-l10n-${{ matrix.triple }}
+          path: |
+            dist/calendar-l10n-${{ matrix.triple }}.tar.gz
+            dist/calendar-l10n-${{ matrix.triple }}.zip
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ls -lh artifacts
+          files=(artifacts/calendar-l10n-*.tar.gz artifacts/calendar-l10n-*.zip)
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF_NAME}"
+            notes="SBCL executable + ICU natives + tzdata/holiday corpora (${tag})."
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "${files[@]}" --clobber
+            else
+              gh release create "$tag" "${files[@]}" --title "$tag" --notes "$notes"
+            fi
+          else
+            tag="binaries-${GITHUB_SHA::7}"
+            notes="Development binary dump from ${GITHUB_SHA}."
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "${files[@]}" --clobber
+            else
+              gh release create "$tag" "${files[@]}" --title "$tag" --notes "$notes" --prerelease
+            fi
+          fi
