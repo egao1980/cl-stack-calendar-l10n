@@ -17,6 +17,11 @@
     (let ((p (merge-pathnames relative (uiop:ensure-directory-pathname root))))
       (when (probe-file p) (uiop:ensure-directory-pathname p)))))
 
+(defun %bundle-file (root relative)
+  (when root
+    (let ((p (merge-pathnames relative (uiop:ensure-directory-pathname root))))
+      (when (probe-file p) p))))
+
 (defun %prepend-env (name dir)
   (let* ((old (uiop:getenv name))
          (dir (string-right-trim "/\\" (namestring dir)))
@@ -63,17 +68,24 @@
   (setf cal::*countries-data-directory* (uiop:ensure-directory-pathname cc-dir))
   (cal:clear-country-calendar-cache))
 
+(defun %retarget-calendars (designator)
+  "Point cl-stack-calendars at a directory or client-app data.zip."
+  (cal:set-data-root designator))
+
 (defun configure-bundled-paths (&optional (root (bundle-root)))
-  "If ROOT looks like a dump bundle (lib/ and/or data/), retarget search paths.
+  "If ROOT looks like a dump bundle (lib/, data.zip, data/), retarget search paths.
+   Prefer data.zip (zip:// VFS) over an unpacked data/countries/ tree.
    No-op when running from source."
   (let ((lib (%bundle-subdir root "lib/"))
         (tz (%bundle-subdir root "data/tzdata/"))
+        (data-zip (%bundle-file root "data.zip"))
         (cc (%bundle-subdir root "data/countries/")))
-    (when (or lib tz cc) (%isolate-asdf))
+    (when (or lib tz data-zip cc) (%isolate-asdf))
     (when lib (%retarget-icu lib))
     (when tz (%retarget-tzdata tz))
-    (when cc (%retarget-countries cc))
-    (and (or lib tz cc) t)))
+    (cond (data-zip (%retarget-calendars data-zip))
+          (cc (%retarget-countries cc)))
+    (and (or lib tz data-zip cc) t)))
 
 (defun image-main ()
   "Toplevel for a dumped executable."
