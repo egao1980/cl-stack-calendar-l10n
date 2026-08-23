@@ -85,6 +85,36 @@
                  (funcall fn))
         (error "no ICU native directory found (install cl-stack-icu overlay)"))))
 
+(defun %copy-needed-icu (from to)
+  "Copy only the sonames load-icu actually opens — not the unversioned
+   aliases (those doubled icudata from 32MB to 64MB)."
+  (ensure-directories-exist to)
+  (let ((find-lib (find-symbol "%FIND-LIB" "CL-STACK-ICU"))
+        (find-mf2 (find-symbol "%FIND-MF2-LIB" "CL-STACK-ICU"))
+        (copied '()))
+    (unless (and find-lib (fboundp find-lib))
+      (error "cl-stack-icu:%find-lib missing"))
+    (dolist (which '(:data :uc :i18n))
+      (let ((src (funcall find-lib from which)))
+        (unless src
+          (error "missing ICU ~A in ~A" which from))
+        (let* ((src (pathname src))
+               (name (file-namestring src)))
+          (%copy-file src (merge-pathnames name to))
+          (push name copied))))
+    (let ((mf2 (or (and find-mf2 (fboundp find-mf2) (funcall find-mf2 from))
+                   (find-if #'probe-file
+                            (mapcar (lambda (n) (merge-pathnames n from))
+                                    '("libcl_stack_icu_mf2.dylib"
+                                      "libcl_stack_icu_mf2.so"
+                                      "cl_stack_icu_mf2.dll"))))))
+      (when mf2
+        (let ((name (file-namestring (pathname mf2))))
+          (%copy-file (pathname mf2) (merge-pathnames name to))
+          (push name copied))))
+    (format t "~&; ICU files: ~{~A~^, ~}~%" (nreverse copied))
+    to))
+
 (defun %bundle (dump-dir)
   (let ((lib (merge-pathnames "lib/" dump-dir))
         (tz (merge-pathnames "data/tzdata/" dump-dir))
@@ -93,11 +123,7 @@
         (tz-src (uiop:symbol-call :cl-stack-tzdata "TZDATA-ROOT"))
         (cal-src (uiop:symbol-call :cl-stack-calendars "DEFAULT-DATA-ROOT")))
     (format t "~&; bundling ICU from ~A~%" icu)
-    (%copy-tree icu lib)
-    #+windows
-    (dolist (file (uiop:directory-files lib))
-      (when (string-equal (pathname-type file) "dll")
-        (%copy-file file (merge-pathnames (file-namestring file) dump-dir))))
+    (%copy-needed-icu icu lib)
     (format t "~&; bundling tzdata from ~A~%" tz-src)
     (%copy-tree tz-src tz)
     (format t "~&; bundling calendar sexps → ~A~%" data-zip)
@@ -155,4 +181,8 @@
   (%freeze-asdf-for-dump)
   (format t "~&; dumping ~A~%" exe)
   (finish-output)
+  ;; Leave the SBCL core uncompressed. zlib-packing it *grows* the
+  ;; release tar.gz/zip: gzip/zstd already crush a raw core (~97MB →
+  ;; ~22MB) and then cannot recompress a zlib core. The 50MB archive
+  ;; fat was duplicate ICU sonames, not an uncompressed Lisp image.
   (uiop:dump-image exe :executable t))

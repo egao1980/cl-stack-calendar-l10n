@@ -93,9 +93,9 @@ jobs:
           triple="${{ matrix.triple }}"
           mkdir -p dist
           if [[ "${{ matrix.os }}" == windows-latest ]]; then
-            (cd dist && 7z a -tzip "calendar-l10n-${triple}.zip" "calendar-l10n-${triple}")
+            (cd dist && 7z a -tzip -mx=9 "calendar-l10n-${triple}.zip" "calendar-l10n-${triple}")
           else
-            tar -C dist -czf "dist/calendar-l10n-${triple}.tar.gz" "calendar-l10n-${triple}"
+            tar -C dist -c "calendar-l10n-${triple}" | gzip -9 > "dist/calendar-l10n-${triple}.tar.gz"
           fi
           ls -lh dist/calendar-l10n-${triple}.*
 
