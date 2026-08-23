@@ -5,8 +5,8 @@
 ;;;; Layout:
 ;;;;   $DUMP_DIR/calendar-l10n[.exe]
 ;;;;   $DUMP_DIR/lib/                 ICU shared libs
+;;;;   $DUMP_DIR/data.zip             cl-stack-calendars sexp tree (zip://)
 ;;;;   $DUMP_DIR/data/tzdata/         cl-stack-tzdata data/
-;;;;   $DUMP_DIR/data/countries/      cl-stack-calendars country sexps
 
 #-sbcl (error "scripts/dump-image.lisp requires SBCL (save-lisp-and-die)")
 
@@ -88,11 +88,10 @@
 (defun %bundle (dump-dir)
   (let ((lib (merge-pathnames "lib/" dump-dir))
         (tz (merge-pathnames "data/tzdata/" dump-dir))
-        (cc (merge-pathnames "data/countries/" dump-dir))
+        (data-zip (merge-pathnames "data.zip" dump-dir))
         (icu (%first-icu-dir))
         (tz-src (uiop:symbol-call :cl-stack-tzdata "TZDATA-ROOT"))
-        (cc-src (symbol-value
-                 (find-symbol "*COUNTRIES-DATA-DIRECTORY*" "CL-STACK-CALENDARS"))))
+        (cal-src (uiop:symbol-call :cl-stack-calendars "DEFAULT-DATA-ROOT")))
     (format t "~&; bundling ICU from ~A~%" icu)
     (%copy-tree icu lib)
     #+windows
@@ -101,9 +100,9 @@
         (%copy-file file (merge-pathnames (file-namestring file) dump-dir))))
     (format t "~&; bundling tzdata from ~A~%" tz-src)
     (%copy-tree tz-src tz)
-    (format t "~&; bundling country calendars from ~A~%" cc-src)
-    (%copy-tree cc-src cc)
-    (values lib tz cc)))
+    (format t "~&; bundling calendar sexps → ~A~%" data-zip)
+    (uiop:symbol-call :cl-stack-calendars "WRITE-DATA-ZIP" data-zip cal-src)
+    (values lib tz data-zip)))
 
 (defun %shared-objects-cell ()
   (or (find-symbol "*SHARED-OBJECTS*" "SB-SYS")
