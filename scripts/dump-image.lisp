@@ -87,9 +87,15 @@
 
 (defun %copy-needed-icu (from to)
   "Copy only the sonames load-icu actually opens — not the unversioned
-   aliases (those doubled icudata from 32MB to 64MB)."
+   aliases (those doubled icudata from 32MB to 64MB).
+
+   %find-lib returns a truename. On a dev machine that is often a Homebrew
+   libicudata.78.3.dylib behind a libicudata.78.dylib symlink; CFFI will
+   not look for the 78.3 basename, so we install under the first candidate
+   name (%lib-candidates), not the resolved filename."
   (ensure-directories-exist to)
   (let ((find-lib (find-symbol "%FIND-LIB" "CL-STACK-ICU"))
+        (candidates (find-symbol "%LIB-CANDIDATES" "CL-STACK-ICU"))
         (find-mf2 (find-symbol "%FIND-MF2-LIB" "CL-STACK-ICU"))
         (copied '()))
     (unless (and find-lib (fboundp find-lib))
@@ -98,9 +104,10 @@
       (let ((src (funcall find-lib from which)))
         (unless src
           (error "missing ICU ~A in ~A" which from))
-        (let* ((src (pathname src))
-               (name (file-namestring src)))
-          (%copy-file src (merge-pathnames name to))
+        (let* ((names (and candidates (fboundp candidates)
+                           (funcall candidates which)))
+               (name (or (first names) (file-namestring (pathname src)))))
+          (%copy-file (pathname src) (merge-pathnames name to))
           (push name copied))))
     (let ((mf2 (or (and find-mf2 (fboundp find-mf2) (funcall find-mf2 from))
                    (find-if #'probe-file
