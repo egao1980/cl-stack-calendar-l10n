@@ -105,15 +105,30 @@
     (%copy-tree cc-src cc)
     (values lib tz cc)))
 
-(defun %forget-cffi-reload ()
-  "Don't let CFFI reopen dump-time absolute paths; image-main reloads from lib/."
+(defun %shared-objects-cell ()
+  (or (find-symbol "*SHARED-OBJECTS*" "SB-SYS")
+      (find-symbol "*SHARED-OBJECTS*" "SB-ALIEN")))
+
+(defun %forget-host-foreign-objects ()
+  "SBCL FOREIGN-REINIT reopens dump-time DLL/so paths *before* any Lisp hook.
+   Close CFFI, mark/drop those objects, and keep only our restore hook so a
+   foreign machine loads ICU from $DUMP_DIR/lib/ (CI smoke hid this: the
+   runner still had C:\\Users\\runneradmin\\...\\cl-stack-icu\\...\\native)."
   (let ((cffi (find-package "CFFI")))
     (when cffi
       (let ((close (find-symbol "CLOSE-FOREIGN-LIBRARIES" cffi)))
         (when (and close (fboundp close))
           (funcall close)))))
-  ;; Drop Roswell/CFFI/QL init hooks — a standalone binary must not
-  ;; re-enter ASDF/QL just because the dump host had a source registry.
+  (let ((cell (%shared-objects-cell)))
+    (when cell
+      (dolist (obj (copy-list (symbol-value cell)))
+        (ignore-errors
+          (setf (sb-alien::shared-object-dont-save obj) t))
+        (let ((path (ignore-errors (sb-alien::shared-object-pathname obj))))
+          (when path
+            (ignore-errors (sb-alien:unload-shared-object path)))))
+      (setf (symbol-value cell) nil)
+      (format t "~&; cleared SBCL shared-objects~%")))
   (setf sb-ext:*init-hooks*
         (list 'cl-stack-calendar-l10n:configure-bundled-paths)))
 
@@ -137,7 +152,7 @@
   (%bundle dump-dir)
   (setf uiop:*image-entry-point* #'cl-stack-calendar-l10n:image-main)
   (uiop:register-image-restore-hook 'cl-stack-calendar-l10n:configure-bundled-paths)
-  (%forget-cffi-reload)
+  (%forget-host-foreign-objects)
   (%freeze-asdf-for-dump)
   (format t "~&; dumping ~A~%" exe)
   (finish-output)

@@ -95,7 +95,7 @@ DUMP_DIR=dist/calendar-l10n ros -l scripts/dump-image.lisp -q
 ./dist/calendar-l10n/calendar-l10n --datetime 2024-07-04 --timezone UTC --countries US
 ```
 
-The tarball is a directory: `calendar-l10n` (or `.exe`), `lib/` (ICU), `data/tzdata/`, `data/countries/`. Keep that layout — the image retargets search paths from the executable directory on startup.
+The tarball is a directory: `calendar-l10n` (or `.exe`), `lib/` (ICU), `data/tzdata/`, `data/countries/`. Keep that layout — the image retargets search paths from the executable directory on startup. On Windows the ICU DLLs are also copied next to the `.exe`.
 
 ## License
 
