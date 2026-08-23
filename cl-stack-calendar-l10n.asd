@@ -1,5 +1,5 @@
 (defsystem "cl-stack-calendar-l10n"
-  :version "0.1.0"
+  :version "0.1.1"
   :description "Sample cl-stack app: localize a date across languages and calendar systems, with holidays"
   :author "egao1980"
   :license "MIT"

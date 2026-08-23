@@ -56,6 +56,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # FOREIGN-REINIT used to reopen dump-host ICU; hide it so the
+          # bundle (lib/ next to the exe) is the only copy that can work.
+          for root in "${HOME}/.local/share/cl-repository" "${CL_REPOSITORY_DEST:-}"; do
+            [[ -n "$root" && -d "$root" ]] || continue
+            find "$root" -type d -iname native 2>/dev/null | while read -r d; do
+              case "$(printf '%s' "$d" | tr '[:upper:]' '[:lower:]')" in
+                *icu*) echo "hiding $d"; mv "$d" "${d}.hidden-for-smoke" ;;
+              esac
+            done
+          done
           root="dist/calendar-l10n-${{ matrix.triple }}"
           tmp="${RUNNER_TEMP:-/tmp}"
           out="$tmp/cal-l10n-smoke.txt"
@@ -70,9 +80,9 @@ jobs:
             --calendars gregorian --countries US --no-english \
             >"$out" 2>"$err"
           cat "$out"
-          if grep -E -i 'compiling file|COMPILE-FILE' "$err"; then
-            echo "binary recompiled Lisp sources — dump isolation failed" >&2
-            cat "$err" >&2
+          if [[ -s "$err" ]]; then cat "$err" >&2; fi
+          if grep -E -i 'compiling file|COMPILE-FILE|runneradmin|cl-stack-icu' "$err"; then
+            echo "binary recompiled Lisp or reopened dump-host ICU" >&2
             exit 1
           fi
           grep -q "Independence" "$out"
