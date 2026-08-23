@@ -23,4 +23,4 @@
              (ok (string= (cal:country-calendar-code (cal:country-calendar "ZZ")) "ZZ")))
         (cal:set-data-root nil)
         (uiop:delete-directory-tree root :validate t :if-does-not-exist :ignore)
-        (sp:clear-zip-filesystem-cache))))))
+        (sp:clear-zip-filesystem-cache)))))
