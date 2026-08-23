@@ -9,7 +9,10 @@ on:
         default: ""
 
 env:
-  PACKAGER_TAG: "0.16.0"
+  # 0.16.0 ql:quickload wants http-protocol (not on QL). Same pin as
+  # every working first-party publish-checkout until the packager
+  # image vendors that stack or we bootstrap via cl-repo.
+  PACKAGER_TAG: "0.12.0"
 
 jobs:
   publish:
