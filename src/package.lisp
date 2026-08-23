@@ -78,6 +78,9 @@
    #:print-catalog
    #:report-and-print
    #:make-app
-   #:main))
+   #:main
+   #:bundle-root
+   #:configure-bundled-paths
+   #:image-main))
 
 (in-package #:cl-stack-calendar-l10n)

@@ -85,6 +85,18 @@ HOLIDAYS  2024-07-04
  :locales "en,ja" :countries "US" :calendars "gregorian,japanese")
 ```
 
+## Binary (SBCL image)
+
+CI dumps a self-contained SBCL executable (`save-lisp-and-die`) plus ICU natives and tz/holiday data for **linux-amd64**, **darwin-arm64**, and **windows-amd64**. Artifacts attach to every run; GitHub Releases publish on `v*` tags and `workflow_dispatch`.
+
+```bash
+# local dump (SBCL)
+DUMP_DIR=dist/calendar-l10n ros -l scripts/dump-image.lisp -q
+./dist/calendar-l10n/calendar-l10n --datetime 2024-07-04 --timezone UTC --countries US
+```
+
+The tarball is a directory: `calendar-l10n` (or `.exe`), `lib/` (ICU), `data/tzdata/`, `data/countries/`. Keep that layout — the image retargets search paths from the executable directory on startup.
+
 ## License
 
 MIT

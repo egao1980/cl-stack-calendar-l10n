@@ -20,7 +20,8 @@
                (:file "format")
                (:file "holidays")
                (:file "render")
-               (:file "cli"))
+               (:file "cli")
+               (:file "image"))
   :in-order-to ((test-op (test-op "cl-stack-calendar-l10n/tests"))))
 
 (defsystem "cl-stack-calendar-l10n/tests"
@@ -32,7 +33,8 @@
                (:file "resolve-test")
                (:file "format-test")
                (:file "holidays-test")
-               (:file "render-test"))
+               (:file "render-test")
+               (:file "image-test"))
   :perform (test-op (o c)
              (unless (symbol-call :rove :run c)
                (error "tests failed for ~A" (component-name c)))))
