@@ -34,6 +34,38 @@ Defaults: 12 major languages; 9 actively used calendar systems (Gregorian, Hijri
 
 `--timezone` wins over `--location` when both are set.
 
+```
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Thursday 2024-07-04  ·  08:00:00
+  Asia/Tokyo  ·  +09:00
+  2024-07-04T08:00:00+09:00
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LOCALES
+  English (en)              Thursday, July 4, 2024 at 08:00:00
+  Japanese (ja)             2024年7月4日木曜日 8:00:00
+                            Thursday, July 4, 2024 at 08:00:00
+  French (fr)               jeudi 4 juillet 2024 à 08:00:00
+                            Thursday, July 4, 2024 at 08:00:00
+  Arabic (ar)               الخميس، 4 يوليو 2024 في 08:00:00
+                            Thursday, July 4, 2024 at 08:00:00
+  Hebrew (he)               יום חמישי, 4 ביולי 2024 בשעה 8:00:00
+                            Thursday, July 4, 2024 at 08:00:00
+
+CALENDARS
+  Gregorian                 Thursday, July 4, 2024
+  Japanese (nengō)          令和6年7月4日木曜日
+                            Thursday, July 4, 6 Reiwa
+  Hebrew                    יום חמישי, 28 בסיוון 5784
+                            Thursday, 28 Sivan 5784
+  Islamic (Hijri)           الخميس، 28 ذو الحجة 1445 هـ
+                            Thursday, Dhuʻl-Hijjah 28, 1445 AH
+
+HOLIDAYS  2024-07-04
+  US  United States         Independence Day
+  checked 3 countries · 1 holiday
+```
+
 ## Stack
 
 | Piece | Role |

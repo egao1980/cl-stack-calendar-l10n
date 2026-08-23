@@ -24,11 +24,29 @@
   english)
 
 (defun wall-unix-seconds (zoned)
-  "Civil wall time of ZONED as Unix seconds, pretending the clock is UTC.
-   ICU formatters use the process default zone; this keeps Y-M-D h:m:s stable."
+  "Civil wall time of ZONED as Unix seconds, pretending the clock is UTC."
   (dt:instant-seconds
    (dt:zoned-moment-to-instant
     (dt:make-zoned-moment (dt:zoned-moment-moment zoned) 0 dt:+utc+))))
+
+(defun %unix-to-universal (unix)
+  (+ unix 2208988800))
+
+(defun local-offset-seconds (unix)
+  "Lisp runtime local UTC offset at UNIX seconds (matches ICU's default zone)."
+  (let* ((univ (%unix-to-universal unix))
+         (parts (multiple-value-list (decode-universal-time univ)))
+         (as-utc (encode-universal-time (first parts) (second parts) (third parts)
+                                        (fourth parts) (fifth parts) (sixth parts)
+                                        0)))
+    (- as-utc univ)))
+
+(defun icu-unix-seconds (zoned)
+  "Unix seconds that make ICU (process-default zone) print ZONED's wall clock.
+   l10n-backend-icu leaves udat timezone null, so we compensate here."
+  (let ((wall (wall-unix-seconds zoned))
+        (real (dt:instant-seconds (dt:zoned-moment-to-instant zoned))))
+    (- wall (local-offset-seconds real))))
 
 (defun date-skeleton (style)
   (ecase style
@@ -78,7 +96,7 @@
          (zoned (parse-datetime-spec datetime zone))
          (instant (dt:zoned-moment-to-instant zoned))
          (date (dt:zoned-moment-date zoned))
-         (unix (wall-unix-seconds zoned))
+         (unix (icu-unix-seconds zoned))
          (locale-tags (resolve-locales locales countries))
          (cal-specs (resolve-calendars calendars))
          (holiday-codes (and holidays (resolve-countries countries locale-tags)))

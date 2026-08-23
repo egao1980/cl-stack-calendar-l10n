@@ -69,6 +69,7 @@
    #:holiday-row-name
    #:format-locale-date
    #:wall-unix-seconds
+   #:icu-unix-seconds
    #:build-report
 
    ;; holidays / output

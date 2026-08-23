@@ -6,7 +6,7 @@
   (let* ((s (string label))
          (n (length s)))
     (if (>= n +label-width+)
-        (concatenate 'string (subseq s 0 (- +label-width+ 1)) "…")
+        (concatenate 'string (subseq s 0 (- +label-width+ 2)) "… ")
         (concatenate 'string s (make-string (- +label-width+ n) :initial-element #\Space)))))
 
 (defun %rule (stream &optional (char #\─) (n 60))

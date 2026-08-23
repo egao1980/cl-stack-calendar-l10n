@@ -6,9 +6,8 @@
   name)
 
 (defun %country-display-name (code calendar)
-  (or (ignore-errors (cal:calendar-name calendar))
-      (country-label code)
-      code))
+  (declare (ignore calendar))
+  (or (country-label code) code))
 
 (defun holidays-on (date country-codes)
   "HOLIDAY-ROW list for DATE in COUNTRY-CODES (ISO alpha-2). Missing corpora are skipped."

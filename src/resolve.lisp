@@ -42,7 +42,10 @@
                (hh (parse-integer rest :end (or colon (min 2 (length rest)))))
                (mm (if colon (parse-integer rest :start (1+ colon)) 0)))
           (* sign (+ (* hh 3600) (* mm 60))))))
-      (t (dt:resolve-zone-id id)))))
+      ((%known-iana-zone-p id)
+       (dt:resolve-zone-id id))
+      (t (error 'cli:cli-usage-error
+                :message (format nil "unknown time zone ~s" id))))))
 
 (defun resolve-location (name)
   "Return IANA zone id for a place name, lat,lon pair, or IANA id. NIL if NAME is empty."
@@ -54,12 +57,20 @@
               ;; lat,lon — civil zone still required; treat as a label only
               (error 'cli:cli-usage-error
                      :message "lat,lon needs --timezone (location is not a zone)")))
-          (handler-case
-              (progn (dt:resolve-zone-id s) s)
-            (dt:zone-not-found ()
+          (if (%known-iana-zone-p s)
+              s
               (error 'cli:cli-usage-error
                      :message (format nil "unknown location ~s (city name or IANA zone)"
-                                      s))))))))
+                                      s)))))))
+
+(defun %known-iana-zone-p (id)
+  "True when cl-stack-tzdata has a TZif for ID. RESOLVE-ZONE-ID alone is not enough —
+   canonical-zone-id returns unknown ids unchanged."
+  (handler-case
+      (progn
+        (uiop:symbol-call :cl-stack-tzdata 'find-zone id)
+        t)
+    (error () nil)))
 
 (defun parse-style (value)
   (let ((s (string-downcase (or value "full"))))
@@ -116,8 +127,17 @@
                  collect (or loc
                              (error 'cli:cli-usage-error
                                     :message (format nil "no default locale for country ~s" code))))))
-    (or (%unique-strings (append from-locales from-countries))
-        (copy-list *default-locale-tags*))))
+    (cond
+      ((and from-locales from-countries)
+       (%unique-strings
+        (append from-locales
+                (remove-if (lambda (tag)
+                             (find (locale-language tag) from-locales
+                                   :key #'locale-language :test #'string-equal))
+                           from-countries))))
+      ((or from-locales from-countries)
+       (%unique-strings (append from-locales from-countries)))
+      (t (copy-list *default-locale-tags*)))))
 
 (defun country-for-locale (tag)
   (or (%assoc-ci tag *locale-countries*)

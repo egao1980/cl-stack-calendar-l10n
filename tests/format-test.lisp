@@ -9,7 +9,7 @@
 
 (deftest build-report-locale-and-calendar-rows
   (let ((r (%fixed-report :locales "ja,fr,en" :calendars "gregorian,japanese,hebrew"
-                          :countries "US" :holidays nil)))
+                          :holidays nil)))
     (ok (= 3 (length (report-locale-rows r))))
     (ok (= 3 (length (report-calendar-rows r))))
     (ok (null (report-holiday-countries r)))
@@ -18,7 +18,9 @@
       (ok (plusp (length (locale-row-native ja))))
       (ok (plusp (length (locale-row-english ja))))
       (ok (null (locale-row-english en)))
-      (ok (search "2024" (locale-row-native en))))))
+      (ok (search "2024" (locale-row-native en)))
+      (ok (or (search "12:00" (locale-row-native en))
+              (search "12:00" (locale-row-native ja)))))))
 
 (deftest japanese-and-french-look-localized
   (let* ((r (%fixed-report :locales "ja,fr" :calendars "japanese" :holidays nil))

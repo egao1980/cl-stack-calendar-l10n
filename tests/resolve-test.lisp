@@ -9,7 +9,8 @@
   (ok (equal *default-locale-tags* (resolve-locales nil nil)))
   (ok (equal '("ja" "fr") (resolve-locales "ja,fr" nil)))
   (ok (equal '("ja-JP" "he-IL") (resolve-locales nil "JP,IL")))
-  (ok (equal '("fr" "ja-JP") (resolve-locales "fr" "JP"))))
+  (ok (equal '("fr" "ja-JP") (resolve-locales "fr" "JP")))
+  (ok (equal '("ja" "fr") (resolve-locales "ja,fr" "JP"))))
 
 (deftest resolve-countries-from-locales
   (ok (equal '("JP" "IL") (resolve-countries nil '("ja" "he"))))
