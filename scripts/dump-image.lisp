@@ -18,8 +18,30 @@
 
 (sb-ext:disable-debugger)
 
+(setf asdf:*compile-file-failure-behaviour* :warn)
+
+(defun %call-with-dump-muffles (fn)
+  #+sbcl
+  (handler-bind ((sb-ext:defconstant-uneql #'continue))
+    (funcall fn))
+  #-sbcl
+  (funcall fn))
+
+(defun %maybe-wire-cl-repo ()
+  "Same bootstrap as scripts/ci-test.lisp so OCI-installed deps are visible.
+   No-op when dumping from a workspace that already has siblings on the registry."
+  (when (asdf:find-system "cl-repository-client" nil)
+    (asdf:load-system "cl-repository-client")
+    (when (find-package "CL-REPOSITORY-CLIENT/ASDF-INTEGRATION")
+      (uiop:symbol-call :cl-repository-client/asdf-integration
+                        "CONFIGURE-ASDF-SOURCE-REGISTRY")
+      (uiop:symbol-call :cl-repository-client/asdf-integration
+                        "LOAD-SYSTEM-INIT-FILES"))))
+
 (format t "~&; dump-image: loading cl-stack-calendar-l10n~%")
-(asdf:load-system "cl-stack-calendar-l10n")
+(%maybe-wire-cl-repo)
+(%call-with-dump-muffles
+ (lambda () (asdf:load-system "cl-stack-calendar-l10n")))
 
 (defun %dump-dir ()
   (let ((raw (or (uiop:getenv "DUMP_DIR") "dist/calendar-l10n")))
