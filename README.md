@@ -95,7 +95,9 @@ DUMP_DIR=dist/calendar-l10n ros -l scripts/dump-image.lisp -q
 ./dist/calendar-l10n/calendar-l10n --datetime 2024-07-04 --timezone UTC --countries US
 ```
 
-The tarball is a directory: `calendar-l10n` (or `.exe`), `lib/` (ICU), `data.zip` (holiday/exchange sexps, opened as `zip://`), `data/tzdata/`. Keep that layout — the image retargets search paths from the executable directory on startup (`set-data-root` on `data.zip`). On Windows the ICU DLLs are also copied next to the `.exe`. Override with `$CL_STACK_CALENDARS_DATA`.
+The tarball is a directory: `calendar-l10n` (or `.exe`), `lib/` (the sonames `load-icu` actually opens — not the unversioned aliases, which doubled `libicudata`), `data.zip` (holiday/exchange sexps, opened as `zip://`), `data/tzdata/`. Keep that layout — the image retargets search paths from the executable directory on startup (`set-data-root` on `data.zip`). Override with `$CL_STACK_CALENDARS_DATA`.
+
+The SBCL core is left uncompressed so gzip/zstd can pack it (~97 MB → ~22 MB in the archive). Shipping a zlib-compressed core *increases* the tarball. Most of what remains is `libicudata` (~32 MB unpacked / ~13 MB gzip, full CLDR). A filtered ICU data library (`icu-data-filter.json`) would be the next cut; we ship the stock overlay.
 
 ## License
 
