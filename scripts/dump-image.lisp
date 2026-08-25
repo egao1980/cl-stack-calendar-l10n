@@ -28,7 +28,7 @@
   (funcall fn))
 
 (defun %maybe-wire-cl-repo ()
-  "Same bootstrap as scripts/ci-test.lisp so OCI-installed deps are visible.
+  "Same bootstrap as canned cl-repo CI so OCI-installed deps are visible.
    No-op when dumping from a workspace that already has siblings on the registry."
   (when (asdf:find-system "cl-repository-client" nil)
     (asdf:load-system "cl-repository-client")
